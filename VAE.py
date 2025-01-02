@@ -68,22 +68,32 @@ def loss(orig,recons):
     calc_loss = nn.BCELoss(reduction="sum")(recons.view(-1,28*28), orig.view(-1,28*28))
     return calc_loss
 
+def accuracy(orig,recons,threshold = 0.1):
+    orig = orig.view(-1,28*28)
+    recons = recons.view(-1, 28 * 28)
+    diff = torch.abs(orig - recons)
+    acc = torch.mean((diff<=threshold).float())
+    return acc.item()
+
 def train_model(model, trainSet, lr = 0.01, epochs = 3, device = "cpu"):
     optimizer = torch.optim.Adam(model.parameters(), lr)
 
     for epoch in range(epochs):
         model.train()
         total_loss = 0.0
+        total_acc = 0.0
         for batch_no, (data,_) in enumerate(trainSet):
             data = data.to(device)
             recons = model(data)
             l = loss(data,recons)
+            acc = accuracy(data,recons)
             total_loss += l.item()
+            total_acc += acc
             optimizer.zero_grad()
             l.backward()
             optimizer.step()
 
-        print(f"Epoch {epoch+1}/{epochs} Loss: {total_loss/len(trainSet.dataset)}")
+        print(f"Epoch {epoch+1}/{epochs} Loss: {total_loss/len(trainSet.dataset)} Accuracy: {total_acc*100/len(trainSet):.2f}%")
 
         with torch.no_grad():
             model.eval()
